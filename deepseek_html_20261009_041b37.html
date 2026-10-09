@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Анти Клауд · Локальный ИИ</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background: #0b0a0a;
+    color: #ffeedd;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    padding: 18px 24px;
+    border-bottom: 1px solid #d3540033;
+    background: #0b0a0acc;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .logo-symbol {
+    position: relative;
+    width: 40px; height: 40px;
+    background: linear-gradient(145deg, #ff8c00, #d35400);
+    border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 16px #ff8c00aa;
+    transform: rotate(-5deg);
+    font-size: 20px;
+  }
+  .logo-symbol::after {
+    content: "";
+    position: absolute;
+    width: 100%; height: 3px;
+    background: #1a120b;
+    border-radius: 3px;
+    transform: rotate(45deg);
+    top: 50%; left: 0; margin-top: -1.5px;
+  }
+  .logo-text {
+    font-weight: 800;
+    font-size: 1.4rem;
+    background: linear-gradient(135deg, #ffb347, #ff8c00);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .logo-text small {
+    display: block;
+    font-size: 0.65rem;
+    color: #ffb347cc;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  main {
+    flex: 1;
+    max-width: 820px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+  }
+  .status {
+    background: #1a120b;
+    border: 1px solid #d3540033;
+    border-radius: 14px;
+    padding: 12px 18px;
+    margin-bottom: 14px;
+    font-size: 0.9rem;
+    color: #e6c3a0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #888;
+    flex-shrink: 0;
+  }
+  .dot.ok { background: #4caf50; box-shadow: 0 0 10px #4caf50; }
+  .dot.bad { background: #f44336; box-shadow: 0 0 10px #f44336; }
+  .chat {
+    flex: 1;
+    background: #0f0b08;
+    border: 1px solid #d3540022;
+    border-radius: 24px;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 400px;
+  }
+  .msg {
+    max-width: 85%;
+    padding: 12px 16px;
+    border-radius: 20px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+  }
+  .msg.user {
+    align-self: flex-end;
+    background: #ff8c0022;
+    border: 1px solid #ff8c0055;
+    color: #ffdbb5;
+    border-bottom-right-radius: 6px;
+  }
+  .msg.bot {
+    align-self: flex-start;
+    background: #2f2015;
+    border: 1px solid #d3540033;
+    color: #e6c3a0;
+    border-bottom-left-radius: 6px;
+  }
+  .msg.err { color: #ff8080; }
+  .input-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+  }
+  input {
+    flex: 1;
+    padding: 15px 20px;
+    border-radius: 40px;
+    background: #0f0b08;
+    border: 1px solid #d3540055;
+    color: #ffeedd;
+    font-size: 0.95rem;
+    outline: none;
+    font-family: inherit;
+  }
+  input:focus { border-color: #ff8c00; box-shadow: 0 0 12px #ff8c0044; }
+  button {
+    padding: 0 26px;
+    border-radius: 40px;
+    background: #ff8c00;
+    border: none;
+    color: #0b0a0a;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 1.1rem;
+  }
+  button:hover { background: #ffa500; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .chat::-webkit-scrollbar { width: 6px; }
+  .chat::-webkit-scrollbar-thumb { background: #d35400; border-radius: 6px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-symbol">⛅</div>
+  <div class="logo-text">Анти Клауд<small>local ai · qwen2.5:7b</small></div>
+</header>
+
+<main>
+  <div class="status">
+    <div class="dot" id="dot"></div>
+    <div id="statusText">Проверяю Ollama...</div>
+  </div>
+
+  <div class="chat" id="chat">
+    <div class="msg bot">Привет! Я Анти Клауд — локальный ИИ на базе Qwen 2.5 7B. Спрашивай что угодно.</div>
+  </div>
+
+  <div class="input-row">
+    <input id="input" placeholder="Напиши сообщение..." autocomplete="off" disabled>
+    <button id="send" disabled>➤</button>
+  </div>
+</main>
+
+<script>
+  const chat = document.getElementById('chat');
+  const input = document.getElementById('input');
+  const sendBtn = document.getElementById('send');
+  const dot = document.getElementById('dot');
+  const statusText = document.getElementById('statusText');
+  const history = [
+    { role: 'system', content: 'Ты — локальный ИИ по имени Анти Клауд. Отвечай кратко, дружелюбно, на русском. Подчёркивай, что работаешь локально через Ollama, без облака.' }
+  ];
+
+  const OLLAMA = 'http://localhost:11434';
+  const MODEL = 'qwen2.5:7b';
+
+  function addMsg(text, cls) {
+    const d = document.createElement('div');
+    d.className = 'msg ' + cls;
+    d.textContent = text;
+    chat.appendChild(d);
+    chat.scrollTop = chat.scrollHeight;
+    return d;
+  }
+
+  fetch(OLLAMA + '/api/tags')
+    .then(r => r.json())
+    .then(data => {
+      dot.classList.add('ok');
+      const models = (data.models || []).map(m => m.name).join(', ');
+      statusText.textContent = '✅ Ollama работает · модели: ' + (models || 'нет');
+      input.disabled = false;
+      sendBtn.disabled = false;
+      input.focus();
+    })
+    .catch(() => {
+      dot.classList.add('bad');
+      statusText.textContent = '❌ Ollama не отвечает. Запусти Ollama и обнови страницу.';
+    });
+
+  async function send() {
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    addMsg(text, 'user');
+    history.push({ role: 'user', content: text });
+
+    const botEl = addMsg('думаю...', 'bot');
+    sendBtn.disabled = true;
+
+    try {
+      const res = await fetch(OLLAMA + '/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: MODEL,
+          messages: history,
+          stream: false
+        })
+      });
+
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const reply = data.message?.content || 'Пустой ответ.';
+      botEl.textContent = reply;
+      history.push({ role: 'assistant', content: reply });
+    } catch (e) {
+      botEl.classList.add('err');
+      botEl.textContent = 'Ошибка: ' + e.message;
+    } finally {
+      sendBtn.disabled = false;
+      input.focus();
+    }
+  }
+
+  sendBtn.addEventListener('click', send);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); send(); }
+  });
+</script>
+</body>
+</html>
